@@ -27,8 +27,9 @@ class RaisingOptionParser(OptionParser):
 
 
 def version_banner():
-    return 'bpython version %s on top of Python %s %s' % (
-        __version__, sys.version.split()[0], sys.executable)
+    import yapypy
+    return 'bpython version %s on top of YaPyPy %s %s' % (
+        __version__, yapypy.__version__, yapypy)
 
 
 def parse(args, extras=None, ignore_stdin=False):

@@ -4,3 +4,4 @@ greenlet
 requests
 setuptools
 six >=1.5
+yapypy

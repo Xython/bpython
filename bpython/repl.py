@@ -39,6 +39,7 @@ import tempfile
 import textwrap
 import time
 import traceback
+from codeop import PyCF_DONT_IMPLY_DEDENT, _features
 from itertools import takewhile
 from six import itervalues
 from types import ModuleType
@@ -82,6 +83,28 @@ class RuntimeTimer(object):
         return self.running_time - self.last_command
 
 
+class YaPypyCompile:
+    """Instances of this class behave much like the built-in compile
+    function, but if one is used to compile text containing a future
+    statement, it "remembers" and compiles all subsequent program texts
+    with the statement in force."""
+
+    def __init__(self):
+        self.flags = PyCF_DONT_IMPLY_DEDENT
+
+    def __call__(self, source, filename='<unknown>', symbol=None):
+        from yapypy.extended_python.py_compile import py_compile
+        from yapypy.extended_python.symbol_analyzer import to_tagged_ast
+        from yapypy.extended_python.parser import parse
+
+        ast_node = to_tagged_ast(parse(source).result)
+        codeob = py_compile(ast_node, filename, True)
+        for feature in _features:
+            if codeob.co_flags & feature.compiler_flag:
+                self.flags |= feature.compiler_flag
+        return codeob
+
+
 class Interpreter(code.InteractiveInterpreter):
     """Source code interpreter for use in bpython."""
 
@@ -121,6 +144,7 @@ class Interpreter(code.InteractiveInterpreter):
         # super()
         code.InteractiveInterpreter.__init__(self, locals)
         self.timer = RuntimeTimer()
+        self.compile = YaPypyCompile()
 
     def reset_running_time(self):
         self.running_time = 0
@@ -180,7 +204,7 @@ class Interpreter(code.InteractiveInterpreter):
             filename = filename_for_console_input(source)
         with self.timer:
             return code.InteractiveInterpreter.runsource(self, source,
-                                                         filename, symbol)
+                                                         filename, True)
 
     def showsyntaxerror(self, filename=None):
         """Override the regular handler, the code's copied and pasted from
@@ -646,7 +670,6 @@ class Repl(object):
                     f.__new__ is not object.__new__ and
                     # py3
                     f.__new__.__class__ is not object.__new__.__class__):
-
                 class_f = f.__new__
 
             if class_f:
@@ -675,14 +698,14 @@ class Repl(object):
                     obj = self.get_object(line)
             return inspection.get_source_unicode(obj)
         except (AttributeError, NameError) as e:
-            msg = _(u"Cannot get source: %s") % (e, )
+            msg = _(u"Cannot get source: %s") % (e,)
         except IOError as e:
-            msg = u"%s" % (e, )
+            msg = u"%s" % (e,)
         except TypeError as e:
-            if "built-in" in u"%s" % (e, ):
-                msg = _("Cannot access source of %r") % (obj, )
+            if "built-in" in u"%s" % (e,):
+                msg = _("Cannot access source of %r") % (obj,)
             else:
-                msg = _("No source code found for %s") % (self.current_line, )
+                msg = _("No source code found for %s") % (self.current_line,)
         raise SourceNotFound(msg)
 
     def set_docstring(self):
@@ -786,6 +809,7 @@ class Repl(object):
             if indentation and self.config.dedent_after > 0:
                 def line_is_empty(line):
                     return not line.strip()
+
                 empty_lines = takewhile(line_is_empty, reversed(self.buffer))
                 if sum(1 for _ in empty_lines) >= self.config.dedent_after:
                     indentation -= 1
@@ -806,6 +830,7 @@ class Repl(object):
                     yield line[len(self.ps2):]
                 elif line.rstrip():
                     yield "# OUT: %s" % (line,)
+
         return "\n".join(process())
 
     def write2file(self):
@@ -831,7 +856,7 @@ class Repl(object):
             mode = self.interact.file_prompt(_('%s already exists. Do you '
                                                'want to (c)ancel, '
                                                ' (o)verwrite or '
-                                               '(a)ppend? ') % (fn, ))
+                                               '(a)ppend? ') % (fn,))
             if mode in ('o', 'overwrite', _('overwrite')):
                 mode = 'w'
             elif mode in ('a', 'append', _('append')):
@@ -848,7 +873,7 @@ class Repl(object):
         except IOError as e:
             self.interact.notify(_("Error writing file '%s': %s") % (fn, e))
         else:
-            self.interact.notify(_('Saved to %s.') % (fn, ))
+            self.interact.notify(_('Saved to %s.') % (fn,))
 
     def copy2clipboard(self):
         """Copy current content to clipboard."""
@@ -901,7 +926,7 @@ class Repl(object):
             self.interact.notify(_('Pastebin URL: %s - Removal URL: %s') %
                                  (paste_url, removal_url), 10)
         else:
-            self.interact.notify(_('Pastebin URL: %s') % (paste_url, ), 10)
+            self.interact.notify(_('Pastebin URL: %s') % (paste_url,), 10)
 
         return paste_url
 
@@ -927,7 +952,7 @@ class Repl(object):
             self.rl_history.append_reload_and_write(s, pythonhist,
                                                     getpreferredencoding())
         except RuntimeError as e:
-            self.interact.notify(u"%s" % (e, ))
+            self.interact.notify(u"%s" % (e,))
 
     def prompt_undo(self):
         """Returns how many lines to undo, 0 means don't undo"""
