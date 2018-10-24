@@ -1,6 +1,8 @@
 # encoding: utf-8
 
 import sys
+from tokenize import TokenError
+
 from six import iteritems, text_type
 
 from pygments.token import Generic, Token, Keyword, Name, Comment, String

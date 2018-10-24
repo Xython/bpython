@@ -49,18 +49,8 @@ class TestCurtsiesRepl(TestCase):
                                                     self.repl.interp.compile)
 
     def test_code_finished_will_parse(self):
-        self.repl.buffer = ['1 + 1']
-        self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (True, True))
-        self.repl.buffer = ['def foo(x):']
+        self.repl.buffer = ['filter(', '', '']
         self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (False, True))
-        self.repl.buffer = ['def foo(x)']
-        self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (True, False))
-        self.repl.buffer = ['def foo(x):', 'return 1']
-        self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (True, False))
-        self.repl.buffer = ['def foo(x):', '    return 1']
-        self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (True, True))
-        self.repl.buffer = ['def foo(x):', '    return 1', '']
-        self.assertTrue(self.cfwp('\n'.join(self.repl.buffer)), (True, True))
 
     def test_external_communication(self):
         self.repl.send_current_block_to_external_editor()

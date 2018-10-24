@@ -41,6 +41,8 @@ import time
 import traceback
 from codeop import PyCF_DONT_IMPLY_DEDENT, _features
 from itertools import takewhile
+from tokenize import TokenError
+
 from six import itervalues
 from types import ModuleType
 
@@ -97,7 +99,12 @@ class YaPypyCompile:
         from yapypy.extended_python.symbol_analyzer import to_tagged_ast
         from yapypy.extended_python.parser import parse
 
-        ast_node = to_tagged_ast(parse(source).result)
+        ast_node = None
+        try:
+            ast_node = to_tagged_ast(parse(source).result)
+        except TokenError:
+            raise SyntaxError
+
         codeob = py_compile(ast_node, filename, True)
         for feature in _features:
             if codeob.co_flags & feature.compiler_flag:
@@ -204,7 +211,7 @@ class Interpreter(code.InteractiveInterpreter):
             filename = filename_for_console_input(source)
         with self.timer:
             return code.InteractiveInterpreter.runsource(self, source,
-                                                         filename, True)
+                                                         filename, symbol)
 
     def showsyntaxerror(self, filename=None):
         """Override the regular handler, the code's copied and pasted from
